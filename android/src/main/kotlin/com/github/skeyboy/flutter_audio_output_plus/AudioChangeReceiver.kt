@@ -1,4 +1,4 @@
-package com.itsmurphy.flutter_audio_output
+package com.github.skeyboy.flutter_audio_output_plus
 
 import android.content.BroadcastReceiver
 import android.content.Context

@@ -8,8 +8,8 @@ import android.media.AudioDeviceInfo.*
 import android.media.AudioManager
 import android.os.Build
 import android.util.Log
-import com.itsmurphy.flutter_audio_output.AudioChangeReceiver
-import com.itsmurphy.flutter_audio_output.AudioEventListener
+import com.github.skeyboy.flutter_audio_output_plus.AudioChangeReceiver
+import com.github.skeyboy.flutter_audio_output_plus.AudioEventListener
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -56,7 +56,7 @@ class FlutterAudioOutputPlusPlugin :
         if (call.method.equals("getPlatformVersion")) {
             result.success("Android " + android.os.Build.VERSION.RELEASE)
         } else if (call.method.equals("getCurrentOutput")) {
-            val deviceInfo = this.currentOutput.first()
+            val deviceInfo = this.currentOutput
             if (deviceInfo != null) {
                 result.success(
                     mapOf(
@@ -139,38 +139,37 @@ class FlutterAudioOutputPlusPlugin :
         return true
     }
 
-    private val currentOutput: MutableList<AudioDeviceInfo?>
+    private val currentOutput: AudioDeviceInfo?
         get() {
             val audioDevices: Array<AudioDeviceInfo?>? =
                 audioManager?.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
 
 
-            var info = mutableListOf<AudioDeviceInfo?>()
 
             if (audioManager?.isSpeakerphoneOn() == true) {
                 val deviceInfo = audioDevices?.first { it?.type == TYPE_BUILTIN_SPEAKER }
                 if (deviceInfo != null) {
-                    info.add(deviceInfo)
+                   return deviceInfo
                 }
             } else if (audioManager?.isBluetoothScoOn() == true) {
                 val deviceInfo =
                     audioDevices?.first { it?.type == TYPE_BLUETOOTH_SCO || it?.type == TYPE_BLUETOOTH_A2DP }
                 if (deviceInfo != null) {
-                    info.add(deviceInfo)
+                   return deviceInfo
                 }
             } else if (this.isWiredHeadsetOn) {
                 val deviceInfo =
                     audioDevices?.first { it?.type == TYPE_USB_HEADSET || it?.type == TYPE_WIRED_HEADSET }
                 if (deviceInfo != null) {
-                    info.add(deviceInfo)
+                    return deviceInfo
                 }
             } else {
                 val deviceInfo = audioDevices?.first { it?.type == TYPE_BUILTIN_EARPIECE }
                 if (deviceInfo != null) {
-                    info.add(deviceInfo)
+                  return deviceInfo
                 }
             }
-            return info
+            return null
         }
 
     private val isWiredHeadsetOn: Boolean
@@ -203,7 +202,7 @@ class FlutterAudioOutputPlusPlugin :
 
 
             val result = audioDevices?.filter {
-                it?.type == TYPE_WIRED_HEADPHONES || it?.type == TYPE_BLUETOOTH_SCO || it?.type == TYPE_BLUETOOTH_A2DP || it?.type == TYPE_WIRED_HEADSET || it?.type == TYPE_USB_HEADSET || it?.type == TYPE_BUILTIN_EARPIECE || it?.type == TYPE_BUILTIN_SPEAKER
+                it?.type == TYPE_WIRED_HEADPHONES || it?.type == TYPE_BLUETOOTH_A2DP || it?.type == TYPE_WIRED_HEADSET || it?.type == TYPE_USB_HEADSET || it?.type == TYPE_BUILTIN_EARPIECE || it?.type == TYPE_BUILTIN_SPEAKER
             }?.filterNotNull()?.map {
                 mapOf(
                     "id" to it.id.toString(),

@@ -34,30 +34,75 @@ public class FlutterAudioOutputPlusPlugin: NSObject, FlutterPlugin {
         case "changeToBluetooth":
             result(changeToBluetooth())
             break
+        case "changeOutput":
+
+            let  arguments = call.arguments as? [String: String] ?? [:]
+
+            guard let deviceId = arguments["id"]  as String?, let deviceType = arguments["type"] as String?  else {
+                result(false)
+                return
+            }
+
+
+            let port = AVAudioSession.Port.init(rawValue: deviceType)
+
+            switch port {
+            case  AVAudioSession.Port.builtInReceiver, AVAudioSession.Port.builtInMic:
+                result( changeToReceiver())
+                break
+            case AVAudioSession.Port.builtInSpeaker:
+                result( changeToSpeaker())
+                break
+            case AVAudioSession.Port.headsetMic, AVAudioSession.Port.headphones:
+                result( changeToHeadphones())
+                break
+            case AVAudioSession.Port.bluetoothA2DP, AVAudioSession.Port.bluetoothLE, AVAudioSession.Port.bluetoothHFP:
+                result( changeToBluetooth())
+                break
+            default:
+                result(false)
+                print("默认操作")
+            }
+
+
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
 
-    func getCurrentOutput() -> [String] {
+    func getCurrentOutput() -> [String:String] {
         let currentRoute = AVAudioSession.sharedInstance().currentRoute
         //        print("hello \(currentRoute.outputs)")
         for output in currentRoute.outputs {
-            return getInfo(output);
+            return getOutputDevice(output);
         }
-        return ["unknown", "0"];
+        return [:];
     }
 
-    func getAvailableInputs() -> [[String]] {
-        var arr = [[String]]()
-        if let inputs = AVAudioSession.sharedInstance().availableInputs {
-            //            print("availableInputs \(inputs.count)")
+    func getAvailableInputs() -> [[String:String]] {
+        var arr = [[String:String]]()
+
+        if let inputs =   AVAudioSession.sharedInstance().availableInputs?.filter({ input in
+            input.portType ==  AVAudioSession.Port.builtInReceiver
+            || input.portType ==  AVAudioSession.Port.builtInMic
+            || input.portType ==  AVAudioSession.Port.builtInSpeaker
+            || input.portType ==  AVAudioSession.Port.headsetMic
+            || input.portType ==  AVAudioSession.Port.headphones
+            || input.portType ==  AVAudioSession.Port.bluetoothA2DP
+            || input.portType ==  AVAudioSession.Port.bluetoothLE
+            || input.portType ==  AVAudioSession.Port.bluetoothHFP
+        }) {
             for input in inputs {
-                arr.append(getInfo(input));
+                arr.append(getOutputDevice(input));
             }
         }
         return arr;
+    }
+
+
+    func getOutputDevice(_ input: AVAudioSessionPortDescription) -> [String:String] {
+        ["type": "\(input.portType.rawValue )", "label": input.portName, "id":  input.uid]
     }
 
     func getInfo(_ input: AVAudioSessionPortDescription) -> [String] {
@@ -122,7 +167,7 @@ public class FlutterAudioOutputPlusPlugin: NSObject, FlutterPlugin {
         if let inputs = AVAudioSession.sharedInstance().availableInputs {
             for input in inputs {
                 if (ports.firstIndex(of: input.portType) != nil) {
-                    try ? AVAudioSession.sharedInstance().setPreferredInput(input);
+                    try? AVAudioSession.sharedInstance().setPreferredInput(input);
                     return true;
                 }
             }
@@ -151,7 +196,7 @@ public class FlutterAudioOutputPlusPlugin: NSObject, FlutterPlugin {
             [weak self] notification in
             guard let self = self,
             let userInfo = notification.userInfo,
-            let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as ?UInt,
+            let reasonValue = userInfo[AVAudioSessionRouteChangeReasonKey] as? UInt,
             let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue) else {
                 return
             }
